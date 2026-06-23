@@ -17,10 +17,18 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB connected successfully'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
+// Routes
+const authRoutes = require('./src/routes/authRoutes');
+const userRoutes = require('./src/routes/userRoutes');
+
 // Basic Route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the HireLoop API' });
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Start Server
 app.listen(PORT, () => {
