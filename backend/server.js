@@ -8,6 +8,11 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
+
+// IMPORTANT: Stripe Webhook must be parsed as a Raw Buffer for signature verification.
+// We apply this strictly to the webhook endpoint BEFORE the global express.json() middleware.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 
 // Placeholder MongoDB Connection
@@ -24,6 +29,7 @@ const companyRoutes = require('./src/routes/companyRoutes');
 const jobRoutes = require('./src/routes/jobRoutes');
 const applicationRoutes = require('./src/routes/applicationRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const paymentRoutes = require('./src/routes/paymentRoutes');
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -37,6 +43,7 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Start Server
 app.listen(PORT, () => {
