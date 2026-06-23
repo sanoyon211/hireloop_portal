@@ -20,6 +20,7 @@ mongoose.connect(MONGO_URI)
 // Routes
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+const companyRoutes = require('./src/routes/companyRoutes');
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -29,6 +30,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/companies', companyRoutes);
 
 // Start Server
 app.listen(PORT, () => {

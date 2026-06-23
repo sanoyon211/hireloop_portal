@@ -49,7 +49,32 @@ const checkRole = (allowedRoles) => {
   };
 };
 
+const optionalVerifyToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next(); // Proceed without user context
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    if (decodedToken && decodedToken.email) {
+      req.firebaseUser = decodedToken;
+      req.user = await User.findOne({ email: decodedToken.email });
+    }
+    
+    next();
+  } catch (error) {
+    console.warn('Optional token verification failed, proceeding without user context.');
+    next();
+  }
+};
+
 module.exports = {
   verifyToken,
   checkRole,
+  optionalVerifyToken,
 };
