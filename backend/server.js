@@ -23,6 +23,7 @@ const userRoutes = require('./src/routes/userRoutes');
 const companyRoutes = require('./src/routes/companyRoutes');
 const jobRoutes = require('./src/routes/jobRoutes');
 const applicationRoutes = require('./src/routes/applicationRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -35,6 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Start Server
 app.listen(PORT, () => {

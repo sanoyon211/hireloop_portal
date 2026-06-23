@@ -63,6 +63,12 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Admin Controls
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   {
     timestamps: true,
