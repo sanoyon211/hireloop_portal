@@ -22,6 +22,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const companyRoutes = require('./src/routes/companyRoutes');
 const jobRoutes = require('./src/routes/jobRoutes');
+const applicationRoutes = require('./src/routes/applicationRoutes');
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -33,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // Start Server
 app.listen(PORT, () => {
