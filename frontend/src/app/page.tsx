@@ -1,7 +1,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import Link from 'next/link';
-import { Search, MapPin, Briefcase, TrendingUp, Building, User, Star, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Briefcase, TrendingUp, Building, User, Star, ArrowRight, Heart } from 'lucide-react';
 
 export default function HomePage() {
   return (

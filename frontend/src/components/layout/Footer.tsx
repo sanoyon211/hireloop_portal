@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Briefcase, Twitter, Linkedin, Github } from 'lucide-react';
+import { Briefcase, Globe, Mail, MessageSquare } from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -16,16 +16,16 @@ export const Footer = () => {
             </p>
             <div className="mt-6 flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-indigo-600 transition-colors">
-                <span className="sr-only">Twitter</span>
-                <Twitter className="h-5 w-5" />
+                <span className="sr-only">Website</span>
+                <Globe className="h-5 w-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-indigo-600 transition-colors">
-                <span className="sr-only">LinkedIn</span>
-                <Linkedin className="h-5 w-5" />
+                <span className="sr-only">Contact</span>
+                <Mail className="h-5 w-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-indigo-600 transition-colors">
-                <span className="sr-only">GitHub</span>
-                <Github className="h-5 w-5" />
+                <span className="sr-only">Community</span>
+                <MessageSquare className="h-5 w-5" />
               </a>
             </div>
           </div>
