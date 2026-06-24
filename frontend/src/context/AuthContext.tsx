@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { authService } from '@/services/authService';
 
 export interface MongoUser {
   _id: string;
@@ -39,24 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const syncUserWithBackend = async (fbUser: FirebaseUser, additionalData?: { role?: string, name?: string }): Promise<MongoUser | null> => {
     try {
-      // Get the fresh Firebase JWT
-      const token = await fbUser.getIdToken();
-      
-      // Call our robust backend sync endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(additionalData || {})
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to sync user with backend');
-      }
-
-      const data = await response.json();
+      // The authService uses axiosInstance, which automatically attaches the token
+      const data = await authService.syncUser(additionalData);
       setMongoUser(data.user);
       return data.user;
     } catch (error) {
