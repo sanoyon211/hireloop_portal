@@ -1,142 +1,208 @@
 "use client";
 
-import React from "react";
-import { Users, UserPlus, Building, Briefcase, DollarSign, Activity } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Users, Building, Briefcase, CreditCard, BellRing, ArrowRight } from "lucide-react";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   LineChart,
-  Line,
+  Line
 } from "recharts";
+import Link from "next/link";
+import { adminService } from "@/services/adminService";
+import { toast } from "sonner";
+import { format, formatDistanceToNow } from "date-fns";
 
-const categoryData = [
-  { name: "Engineering", jobs: 120 },
-  { name: "Design", jobs: 45 },
-  { name: "Product", jobs: 30 },
-  { name: "Marketing", jobs: 25 },
-  { name: "Sales", jobs: 40 },
-];
+export default function AdminDashboardHome() {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalRecruiters: 0,
+    totalCompanies: 0,
+    totalJobs: 0,
+    platformRevenue: 0,
+    jobCategories: [],
+    newUsers: [],
+    recentPayments: []
+  });
+  const [loading, setLoading] = useState(true);
 
-const registrationData = [
-  { day: "1", users: 12 }, { day: "5", users: 19 }, { day: "10", users: 15 },
-  { day: "15", users: 25 }, { day: "20", users: 22 }, { day: "25", users: 30 },
-  { day: "30", users: 45 },
-];
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const response = await adminService.getDashboardStats();
+        // Assuming response structure contains these fields directly or in a `data` object
+        const data = response.data || response;
+        
+        setStats({
+          totalUsers: data.totalUsers || 0,
+          totalRecruiters: data.totalRecruiters || 0,
+          totalCompanies: data.totalCompanies || 0,
+          totalJobs: data.totalJobs || 0,
+          platformRevenue: data.platformRevenue || 0,
+          jobCategories: data.jobCategories || [],
+          newUsers: data.newUsers || [],
+          recentPayments: data.recentPayments || []
+        });
+      } catch (error) {
+        console.error("Failed to fetch admin stats:", error);
+        toast.error("Failed to load dashboard statistics. Backend might be unreachable.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardStats();
+  }, []);
 
-const recentPayments = [
-  { id: "PAY-1001", company: "TechFlow Inc.", amount: "$99.00", date: "2 mins ago", plan: "Growth Plan" },
-  { id: "PAY-1002", company: "DataCorp", amount: "$299.00", date: "15 mins ago", plan: "Enterprise Plan" },
-  { id: "PAY-1003", company: "InnovateSpace", amount: "$99.00", date: "1 hour ago", plan: "Growth Plan" },
-  { id: "PAY-1004", company: "CreativeWeb", amount: "$99.00", date: "3 hours ago", plan: "Growth Plan" },
-];
-
-export default function AdminDashboardPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Command Center</h1>
-        <p className="text-gray-500 mt-2">Overview of platform metrics, user growth, and revenue.</p>
+        <p className="text-gray-500 mt-2">Platform-wide analytics and quick actions.</p>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatCard icon={<Users className="text-blue-600" />} title="Total Users" value="12,450" />
-        <StatCard icon={<UserPlus className="text-indigo-600" />} title="Total Recruiters" value="842" />
-        <StatCard icon={<Building className="text-purple-600" />} title="Total Companies" value="610" />
-        <StatCard icon={<Briefcase className="text-pink-600" />} title="Total Jobs Posted" value="4,215" />
-        <StatCard icon={<DollarSign className="text-emerald-600" />} title="Platform Revenue" value="$42,500" trend="+12%" />
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 animate-pulse">
+           {[1,2,3,4,5].map(i => <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <StatCard icon={<Users className="text-blue-600" />} title="Total Users" value={stats.totalUsers.toLocaleString()} />
+          <StatCard icon={<Briefcase className="text-indigo-600" />} title="Recruiters" value={stats.totalRecruiters.toLocaleString()} />
+          <StatCard icon={<Building className="text-emerald-600" />} title="Companies" value={stats.totalCompanies.toLocaleString()} />
+          <StatCard icon={<Briefcase className="text-purple-600" />} title="Total Jobs" value={stats.totalJobs.toLocaleString()} />
+          <StatCard icon={<CreditCard className="text-amber-600" />} title="Revenue" value={`$${stats.platformRevenue.toLocaleString()}`} />
+        </div>
+      )}
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <Activity className="w-5 h-5 mr-2 text-indigo-500" />
-            Job Posts by Category
-          </h2>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="jobs" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Job Posts per Category</h2>
+          <div className="flex-1 min-h-[300px]">
+            {loading ? (
+               <div className="w-full h-full flex items-end justify-around pb-6 gap-2">
+                  {[1,2,3,4,5].map(i => <div key={i} className="w-12 bg-gray-200 rounded-t-sm animate-pulse" style={{ height: `${Math.random() * 80 + 20}%`}}></div>)}
+               </div>
+            ) : stats.jobCategories.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.jobCategories} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="category" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                  <RechartsTooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <BarChart className="w-8 h-8 mb-2" />
+                <p>No category data available</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <Users className="w-5 h-5 mr-2 text-blue-500" />
-            New Registrations (30 Days)
-          </h2>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={registrationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Line type="monotone" dataKey="users" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">New Users (30 Days)</h2>
+          <div className="flex-1 min-h-[300px]">
+            {loading ? (
+               <div className="w-full h-full bg-gray-50 rounded-xl animate-pulse"></div>
+            ) : stats.newUsers.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.newUsers} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                  <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <LineChart className="w-8 h-8 mb-2" />
+                <p>No user data available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Recent Payments */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Subscription Payments</h2>
-          <button className="text-indigo-600 hover:text-indigo-700 text-sm font-medium transition-colors">View All</button>
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+             <CreditCard className="w-5 h-5 mr-2 text-indigo-500" />
+             Recent Payments
+          </h2>
+          <Link href="/dashboard/admin/payments" className="text-indigo-600 hover:text-indigo-700 text-sm font-medium transition-colors">
+             View All &rarr;
+          </Link>
         </div>
         <div className="divide-y divide-gray-100">
-          {recentPayments.map((payment) => (
-            <div key={payment.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                  <DollarSign className="w-5 h-5" />
+           {loading ? (
+              [1,2,3].map(i => (
+                <div key={i} className="p-6 flex items-center justify-between animate-pulse">
+                   <div className="flex items-center gap-3 w-full">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1 space-y-2">
+                         <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                         <div className="h-3 w-1/4 bg-gray-200 rounded"></div>
+                      </div>
+                   </div>
                 </div>
-                <div>
-                  <div className="font-medium text-gray-900">{payment.company}</div>
-                  <div className="text-sm text-gray-500">{payment.plan} • {payment.id}</div>
+              ))
+           ) : stats.recentPayments.length === 0 ? (
+              <div className="p-12 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+                <CreditCard className="w-8 h-8 mb-2 text-gray-300" />
+                <p>No recent payments found.</p>
+              </div>
+           ) : (
+              stats.recentPayments.map((payment: any) => (
+                <div key={payment._id || payment.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">${payment.amount} - {payment.planName || 'Plan'}</div>
+                      <div className="text-sm text-gray-500">{payment.userEmail || payment.userId || 'Unknown User'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                     <div className="text-sm font-medium text-gray-900">
+                        {payment.createdAt 
+                           ? `${format(new Date(payment.createdAt), 'MMM d, yyyy')} · ${formatDistanceToNow(new Date(payment.createdAt))} ago`
+                           : 'Unknown Date'}
+                     </div>
+                     <span className={`inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium ${
+                      payment.status === 'Success' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {payment.status || 'Success'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="font-semibold text-gray-900">{payment.amount}</div>
-                <div className="text-xs text-gray-500">{payment.date}</div>
-              </div>
-            </div>
-          ))}
+              ))
+           )}
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, title, value, trend }: { icon: React.ReactNode, title: string, value: string, trend?: string }) {
+function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string, value: string }) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-gray-50 rounded-xl">
+      <div className="flex items-center space-x-3 mb-4">
+        <div className="p-2.5 bg-gray-50 rounded-xl">
           {icon}
         </div>
-        {trend && (
-          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-            {trend}
-          </span>
-        )}
+        <p className="text-sm font-medium text-gray-500">{title}</p>
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-500">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        <p className="text-3xl font-extrabold text-gray-900">{value}</p>
       </div>
     </div>
   );

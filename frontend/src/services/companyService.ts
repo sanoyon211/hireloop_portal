@@ -11,13 +11,18 @@ export const companyService = {
     return response.data;
   },
 
+  getAllCompanies: async () => {
+    const response = await axiosInstance.get('/companies');
+    return response.data;
+  },
+
   approveCompany: async (id: string) => {
-    const response = await axiosInstance.patch(`/admin/companies/${id}/approve`);
+    const response = await axiosInstance.patch(`/companies/${id}/status`, { status: 'Approved' });
     return response.data;
   },
 
   rejectCompany: async (id: string) => {
-    const response = await axiosInstance.patch(`/admin/companies/${id}/reject`);
+    const response = await axiosInstance.patch(`/companies/${id}/status`, { status: 'Rejected' });
     return response.data;
   }
 };

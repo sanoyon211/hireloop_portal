@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Download, UserCircle, BellRing } from "lucide-react";
 import { useParams } from "next/navigation";
 import { applicationService } from "@/services/applicationService";
+import toast from "react-hot-toast";
 
 const statuses = ["Applied", "Under Review", "Shortlisted", "Interview Scheduled", "Rejected", "Offered"];
 
@@ -13,7 +14,6 @@ export default function JobApplicantsPage() {
   const jobId = params.jobId as string;
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApplicants = async () => {
@@ -41,24 +41,16 @@ export default function JobApplicantsPage() {
       await applicationService.updateApplicationStatus(appId, newStatus);
       
       // Show success toast
-      setToastMessage(`Status for ${applicantName} updated to "${newStatus}". They will be notified via email.`);
-      setTimeout(() => setToastMessage(null), 4000);
+      toast.success(`Status for ${applicantName} updated to "${newStatus}"`);
     } catch (error) {
       console.error("Error updating status:", error);
-      setToastMessage("Failed to update status. Please try again.");
-      setTimeout(() => setToastMessage(null), 4000);
+      toast.error("Failed to update status. Please try again.");
+      // revert optimistic update if necessary
     }
   };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 relative pb-12">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-24 right-8 bg-indigo-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 transition-opacity duration-300 z-50 animate-in fade-in slide-in-from-top-4">
-          <BellRing className="w-5 h-5 text-indigo-200" />
-          <span className="font-medium text-sm">{toastMessage}</span>
-        </div>
-      )}
 
       <div className="flex items-center space-x-4 mb-8">
         <Link 

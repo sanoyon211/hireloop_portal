@@ -1,88 +1,138 @@
-import React from "react";
-import { DollarSign, TrendingUp, Users, Crown, CreditCard } from "lucide-react";
+"use client";
 
-// Helper function for relative date
-function getRelativeDate(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date("2026-06-24"); // Mock current date for consistency based on mock data
-  const diffTime = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+import React, { useState, useEffect } from "react";
+import { CreditCard, TrendingUp, Calendar as CalendarIcon, CheckCircle2 } from "lucide-react";
+import { adminService } from "@/services/adminService";
+import { toast } from "sonner";
+import { format, formatDistanceToNow } from "date-fns";
+
+export default function PaymentsPage() {
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const response = await adminService.getAllPayments();
+        const data = response.payments || response.data || response || [];
+        setPayments(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+        toast.error("Failed to load payments history");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPayments();
+  }, []);
+
+  const totalRevenue = payments.filter(p => p.status === 'Success').reduce((sum, p) => sum + (p.amount || 0), 0);
+  const activeSubs = payments.filter(p => p.status === 'Success').length; // Simplification for dashboard purposes
   
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return `${diffDays} days ago`;
-}
+  // Calculate this month's revenue
+  const thisMonth = new Date().getMonth();
+  const monthlyRevenue = payments.filter(p => p.status === 'Success' && new Date(p.createdAt || Date.now()).getMonth() === thisMonth)
+                                 .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-const mockPayments = [
-  { id: "TXN-9021", email: "bob@techflow.com", plan: "Growth", amount: "$99.00", date: "2026-06-23", status: "Succeeded" },
-  { id: "TXN-8742", email: "diana@amazon.com", plan: "Enterprise", amount: "$299.00", date: "2026-06-20", status: "Succeeded" },
-  { id: "TXN-7653", email: "evan.w@startup.io", plan: "Pro (Seeker)", amount: "$15.00", date: "2026-06-15", status: "Succeeded" },
-  { id: "TXN-6544", email: "spammer@fake.com", plan: "Growth", amount: "$99.00", date: "2026-06-14", status: "Failed" },
-  { id: "TXN-5435", email: "charlie.d@gmail.com", plan: "Premium (Seeker)", amount: "$29.00", date: "2026-06-05", status: "Succeeded" },
-];
-
-export default function AdminPaymentsPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Payments & Subscriptions</h1>
-        <p className="text-gray-500 mt-2">Monitor platform revenue, active plans, and transaction history.</p>
+        <p className="text-gray-500 mt-2">Monitor platform revenue and recent transactions.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={<DollarSign className="text-emerald-600" />} title="Total Revenue" value="$142,500" />
-        <StatCard icon={<TrendingUp className="text-blue-600" />} title="Monthly Revenue" value="$18,450" trend="+8%" />
-        <StatCard icon={<Users className="text-indigo-600" />} title="Active Seeker Subs" value="1,240" />
-        <StatCard icon={<Crown className="text-purple-600" />} title="Active Recruiter Subs" value="485" />
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
+           {[1,2,3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard 
+            icon={<CreditCard className="text-indigo-600" />} 
+            title="Total Revenue" 
+            value={`$${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}`} 
+          />
+          <StatCard 
+            icon={<TrendingUp className="text-emerald-600" />} 
+            title="Revenue This Month" 
+            value={`$${monthlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}`} 
+          />
+          <StatCard 
+            icon={<CheckCircle2 className="text-blue-600" />} 
+            title="Active Subscriptions" 
+            value={activeSubs.toString()} 
+          />
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center space-x-2">
-          <CreditCard className="w-5 h-5 text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900">Transaction History</h2>
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+           <h2 className="text-lg font-semibold text-gray-900">Transaction History</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[900px]">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">User Email</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Plan</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Transaction ID</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">User / Plan</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Amount</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Transaction ID</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Status</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {mockPayments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-indigo-50/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{payment.email}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                      {payment.plan}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
-                    {payment.amount}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{getRelativeDate(payment.date)}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-mono text-gray-500">
-                    {payment.id}
-                  </td>
-                  <td className="px-6 py-4">
-                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                      payment.status === 'Succeeded' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      {payment.status}
-                    </span>
-                  </td>
+              {loading ? (
+                [1,2,3,4].map(i => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4">
+                       <div className="h-4 bg-gray-200 rounded w-32 mb-1"></div>
+                       <div className="h-3 bg-gray-200 rounded w-20"></div>
+                    </td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+                    <td className="px-6 py-4 flex justify-end"><div className="h-6 bg-gray-200 rounded-full w-16"></div></td>
+                  </tr>
+                ))
+              ) : payments.length === 0 ? (
+                <tr>
+                   <td colSpan={5} className="p-16 text-center text-gray-500">
+                     <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                     No transactions found.
+                   </td>
                 </tr>
-              ))}
+              ) : (
+                payments.map((payment) => (
+                  <tr key={payment._id || payment.id} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-6 py-4 text-sm font-mono text-gray-500">
+                      {payment.transactionId || payment.id || `txn_${Math.random().toString(36).substr(2, 9)}`}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900">{payment.userEmail || payment.userId || 'User Account'}</div>
+                      <div className="text-sm text-indigo-600">{payment.planName || 'Subscription'}</div>
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      ${(payment.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {payment.createdAt 
+                          ? `${format(new Date(payment.createdAt), 'MMM d, yyyy')} · ${formatDistanceToNow(new Date(payment.createdAt))} ago`
+                          : 'Unknown Date'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                        payment.status === 'Success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        payment.status === 'Failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+                        'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {payment.status || 'Success'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -91,18 +141,11 @@ export default function AdminPaymentsPage() {
   );
 }
 
-function StatCard({ icon, title, value, trend }: { icon: React.ReactNode, title: string, value: string, trend?: string }) {
+function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string, value: string }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-gray-50 rounded-xl">
-          {icon}
-        </div>
-        {trend && (
-          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-            {trend}
-          </span>
-        )}
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+      <div className="p-3 bg-gray-50 rounded-xl">
+        {icon}
       </div>
       <div>
         <p className="text-sm font-medium text-gray-500">{title}</p>
