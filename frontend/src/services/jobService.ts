@@ -19,5 +19,15 @@ export const jobService = {
   applyForJob: async (jobId: string, applicationData: Record<string, any>) => {
     const response = await axiosInstance.post(`/jobs/${jobId}/apply`, applicationData);
     return response.data;
+  },
+
+  getMyJobs: async () => {
+    const response = await axiosInstance.get('/jobs/me');
+    return response.data;
+  },
+
+  getSavedJobs: async () => {
+    const response = await axiosInstance.get('/jobs/saved');
+    return response.data;
   }
 };

@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { Briefcase, CheckCircle2, Users, Search, BellRing, ArrowRight } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -11,133 +12,160 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { jobService } from "@/services/jobService";
+import { applicationService } from "@/services/applicationService";
 
-const chartData = [
-  { name: "Frontend Dev", applicants: 45 },
-  { name: "Backend Eng", applicants: 32 },
-  { name: "UI/UX Designer", applicants: 28 },
-  { name: "Product Mgr", applicants: 15 },
-  { name: "QA Tester", applicants: 10 },
-];
+export default function RecruiterDashboardPage() {
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [recentApplicants, setRecentApplicants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const recentApplications = [
-  { id: 1, name: "Alice Smith", role: "Frontend Developer", date: "2 hours ago", status: "Under Review" },
-  { id: 2, name: "Bob Johnson", role: "Backend Engineer", date: "4 hours ago", status: "New" },
-  { id: 3, name: "Charlie Davis", role: "UI/UX Designer", date: "1 day ago", status: "Interviewed" },
-  { id: 4, name: "Diana Prince", role: "Product Manager", date: "2 days ago", status: "Rejected" },
-];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await jobService.getMyJobs();
+        const myJobs = response.jobs || response.data || response || [];
+        const jobsArray = Array.isArray(myJobs) ? myJobs : [];
+        setJobs(jobsArray);
 
-export default function RecruiterDashboardHome() {
+        // Fetch recent applicants for the first active job as an example
+        // (In a real scenario, the backend might have a dedicated endpoint for recent applicants across all jobs)
+        if (jobsArray.length > 0) {
+           const activeJob = jobsArray.find((j: any) => j.status === 'Active') || jobsArray[0];
+           const applicantsResp = await applicationService.getJobApplicants(activeJob._id || activeJob.id);
+           const applicantsData = applicantsResp.applications || applicantsResp.data || applicantsResp || [];
+           setRecentApplicants(Array.isArray(applicantsData) ? applicantsData.slice(0, 5) : []);
+        }
+      } catch (error) {
+        console.error("Error fetching recruiter dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const totalJobs = jobs.length;
+  const activeJobs = jobs.filter(j => j.status === 'Active').length;
+  const closedJobs = jobs.filter(j => j.status === 'Closed').length;
+  const totalApplicants = jobs.reduce((sum, job) => sum + (job.applicantCount || job.applicants?.length || 0), 0);
+
+  const chartData = jobs.map(job => ({
+    name: job.title.length > 15 ? job.title.substring(0, 15) + '...' : job.title,
+    applicants: job.applicantCount || job.applicants?.length || 0
+  })).filter(j => j.applicants > 0);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Recruiter Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-500">Overview of your jobs, applicants, and company profile.</p>
+        <p className="text-gray-500 mt-2">Overview of your job postings and candidate pipeline.</p>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Total Job Posts", value: "12", color: "bg-indigo-50 text-indigo-700" },
-          { label: "Total Applicants", value: "130", color: "bg-blue-50 text-blue-700" },
-          { label: "Active Jobs", value: "4", color: "bg-green-50 text-green-700" },
-          { label: "Jobs Closed", value: "8", color: "bg-gray-50 text-gray-700" },
-        ].map((stat, idx) => (
-          <div key={idx} className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-            <dt className="truncate text-sm font-medium text-gray-500">{stat.label}</dt>
-            <dd className="mt-2 text-3xl font-semibold tracking-tight text-gray-900">{stat.value}</dd>
-            <div className={`mt-3 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${stat.color}`}>
-              Updated today
-            </div>
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+           {[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard icon={<Briefcase className="text-indigo-600" />} title="Total Job Posts" value={totalJobs.toString()} />
+          <StatCard icon={<CheckCircle2 className="text-emerald-600" />} title="Active Jobs" value={activeJobs.toString()} />
+          <StatCard icon={<Briefcase className="text-gray-500" />} title="Closed Jobs" value={closedJobs.toString()} />
+          <StatCard icon={<Users className="text-blue-600" />} title="Total Applicants" value={totalApplicants.toString()} />
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Company Profile Card */}
-        <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 flex flex-col items-center text-center">
-          <div className="h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-3xl font-bold mb-4 shadow-inner">
-            TC
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Applicants per Job</h2>
+          <div className="flex-1 min-h-[300px]">
+             {loading ? (
+                <div className="w-full h-full flex items-end justify-around pb-6 gap-2">
+                   {[1,2,3,4,5].map(i => <div key={i} className="w-12 bg-gray-200 rounded-t-sm animate-pulse" style={{ height: `${Math.random() * 80 + 20}%`}}></div>)}
+                </div>
+             ) : chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11 }} dy={10} angle={-45} textAnchor="end" />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Bar dataKey="applicants" fill="#4F46E5" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  </BarChart>
+                </ResponsiveContainer>
+             ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <BarChart className="w-8 h-8 mb-2" />
+                  <p>No applicant data available</p>
+                </div>
+             )}
           </div>
-          <h2 className="text-xl font-bold text-gray-900">TechCorp Solutions</h2>
-          <p className="text-sm text-gray-500 mt-1">Information Technology</p>
-          <div className="mt-6 w-full pt-6 border-t border-gray-100">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-500">Status</span>
-              <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                Approved
-              </span>
-            </div>
-            <div className="flex justify-between text-sm mb-6">
-              <span className="text-gray-500">Location</span>
-              <span className="font-medium text-gray-900">San Francisco, CA</span>
-            </div>
-            <Link 
-              href="/dashboard/recruiter/company" 
-              className="w-full inline-flex justify-center rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Edit Company Profile
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+               <BellRing className="w-5 h-5 mr-2 text-amber-500" />
+               Recent Applications
+            </h2>
+            <Link href="/dashboard/recruiter/jobs" className="text-indigo-600 hover:text-indigo-700 text-sm font-medium transition-colors">
+               Manage Candidates
             </Link>
           </div>
-        </div>
-
-        {/* Right: Recharts Bar Chart */}
-        <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 lg:col-span-2 flex flex-col">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Applicant Trends (Last 30 Days)</h2>
-          <div className="flex-1 w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                <Tooltip 
-                  cursor={{ fill: '#f3f4f6' }}
-                  contentStyle={{ borderRadius: '0.5rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="applicants" fill="#4f46e5" radius={[4, 4, 0, 0]} maxBarSize={50} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="divide-y divide-gray-100 flex-1 overflow-y-auto">
+             {loading ? (
+                [1,2,3].map(i => (
+                  <div key={i} className="p-6 flex items-center justify-between animate-pulse">
+                     <div className="flex items-center gap-3 w-full">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                        <div className="flex-1 space-y-2">
+                           <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                           <div className="h-3 w-1/4 bg-gray-200 rounded"></div>
+                        </div>
+                     </div>
+                  </div>
+                ))
+             ) : recentApplicants.length === 0 ? (
+                <div className="p-12 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+                  <Users className="w-8 h-8 mb-2 text-gray-300" />
+                  <p>No recent applicants found.</p>
+                </div>
+             ) : (
+                recentApplicants.map((app) => (
+                  <div key={app._id || app.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center justify-between group">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold text-sm">
+                        {app.seeker?.name?.substring(0,2).toUpperCase() || 'US'}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{app.seeker?.name || 'Applicant'}</div>
+                        <div className="text-sm text-gray-500">{app.job?.title || 'Applied for role'}</div>
+                      </div>
+                    </div>
+                    <Link href={`/dashboard/recruiter/jobs/${app.job?._id || app.jobId}/applicants`} className="text-gray-400 group-hover:text-indigo-600 transition-colors">
+                       <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  </div>
+                ))
+             )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Bottom: Recent Applications */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Applications</h2>
-          <Link href="/dashboard/recruiter/applications" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            View all
-          </Link>
+function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string, value: string }) {
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+      <div className="flex items-center space-x-3 mb-4">
+        <div className="p-2.5 bg-gray-50 rounded-xl">
+          {icon}
         </div>
-        <ul className="divide-y divide-gray-100">
-          {recentApplications.map((app) => (
-            <li key={app.id} className="px-6 py-5 hover:bg-gray-50 transition-colors flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                  {app.name.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{app.name}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">Applied for <span className="font-medium text-gray-700">{app.role}</span></p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-right">
-                <span className="hidden sm:inline-block text-sm text-gray-500">{app.date}</span>
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                  app.status === 'New' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
-                  app.status === 'Under Review' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' :
-                  app.status === 'Interviewed' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                  'bg-gray-50 text-gray-600 ring-gray-500/10'
-                }`}>
-                  {app.status}
-                </span>
-                <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium ml-2">
-                  Review
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <p className="text-sm font-medium text-gray-500">{title}</p>
+      </div>
+      <div>
+        <p className="text-3xl font-extrabold text-gray-900">{value}</p>
       </div>
     </div>
   );

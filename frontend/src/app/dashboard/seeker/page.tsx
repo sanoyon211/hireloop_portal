@@ -1,127 +1,168 @@
 "use client";
 
-import { useAuth } from '@/context/AuthContext';
-import { Bookmark, FileText, Calendar, Award, Bell, Briefcase } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import Link from 'next/link';
+import React, { useState, useEffect } from "react";
+import { Briefcase, Clock, CheckCircle2, XCircle, Search } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from "recharts";
+import { applicationService } from "@/services/applicationService";
 
-export default function SeekerDashboard() {
-  const { mongoUser } = useAuth();
+export default function SeekerDashboardPage() {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock Data for the Dashboard
-  const stats = [
-    { name: 'Saved Jobs', value: 12, icon: Bookmark, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-    { name: 'Applications', value: 24, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { name: 'Interviews', value: 3, icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { name: 'Offers', value: 1, icon: Award, color: 'text-purple-600', bg: 'bg-purple-100' },
-  ];
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        const response = await applicationService.getMyApplications();
+        const data = response.applications || response.data || response || [];
+        setApplications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching applications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApps();
+  }, []);
 
-  const applicationData = [
-    { name: 'Applied', value: 15, color: '#3b82f6' }, // blue-500
-    { name: 'Under Review', value: 5, color: '#eab308' }, // yellow-500
-    { name: 'Shortlisted', value: 3, color: '#f97316' }, // orange-500
-    { name: 'Rejected', value: 1, color: '#ef4444' }, // red-500
-    { name: 'Offered', value: 1, color: '#10b981' }, // emerald-500
-  ];
+  const totalApps = applications.length;
+  const interviewingApps = applications.filter(a => a.status === 'Shortlisted' || a.status === 'Interview Scheduled').length;
+  const offeredApps = applications.filter(a => a.status === 'Offered').length;
 
-  const recentActivity = [
-    { id: 1, text: 'Your application for "Frontend Developer" at Stripe was viewed.', time: '2 hours ago', type: 'view' },
-    { id: 2, text: 'New job alert: "React Engineer" in San Francisco.', time: '5 hours ago', type: 'alert' },
-    { id: 3, text: 'You were shortlisted for "UX Designer" at Airbnb!', time: '1 day ago', type: 'success' },
-    { id: 4, text: 'Saved a new job: "Full Stack Developer" at Vercel.', time: '2 days ago', type: 'action' },
-  ];
+  const getStatusCount = (status: string) => applications.filter(a => a.status === status).length;
+
+  const chartData = [
+    { name: "Applied", value: getStatusCount('Applied'), color: "#3B82F6" },
+    { name: "Under Review", value: getStatusCount('Under Review'), color: "#F59E0B" },
+    { name: "Shortlisted", value: getStatusCount('Shortlisted'), color: "#8B5CF6" },
+    { name: "Offered", value: getStatusCount('Offered'), color: "#10B981" },
+    { name: "Rejected", value: getStatusCount('Rejected'), color: "#EF4444" },
+  ].filter(item => item.value > 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Overview</h1>
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Welcome back!</h1>
+        <p className="text-gray-500 mt-2">Here is a summary of your job hunt progress.</p>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.name}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stat.value}</p>
-              </div>
-              <div className={`w-12 h-12 rounded-lg ${stat.bg} flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard icon={<Briefcase className="text-blue-600" />} title="Total Applications" value={totalApps.toString()} />
+          <StatCard icon={<Clock className="text-purple-600" />} title="Interviews / Shortlisted" value={interviewingApps.toString()} />
+          <StatCard icon={<CheckCircle2 className="text-emerald-600" />} title="Offers Received" value={offeredApps.toString()} />
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* User Profile Card */}
-        <div className="col-span-1 bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col items-center justify-center text-center">
-          <div className="w-24 h-24 rounded-full bg-indigo-100 border-4 border-white shadow-md overflow-hidden flex items-center justify-center mb-4">
-            {mongoUser?.avatar ? (
-              <img src={mongoUser.avatar} alt="Profile" className="w-full h-full object-cover" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Application Status Distribution</h2>
+          <div className="h-72 w-full">
+            {loading ? (
+               <div className="w-full h-full bg-gray-100 rounded-full animate-pulse max-w-xs mx-auto"></div>
+            ) : chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             ) : (
-              <span className="text-3xl font-bold text-indigo-600">{mongoUser?.name?.charAt(0) || 'U'}</span>
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <Search className="w-8 h-8 mb-2" />
+                <p>No applications to display</p>
+              </div>
             )}
           </div>
-          <h2 className="text-xl font-bold text-gray-900">{mongoUser?.name || 'Loading...'}</h2>
-          <p className="text-gray-500 text-sm mt-1">{mongoUser?.email}</p>
-          <span className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-            {mongoUser?.role}
-          </span>
-          <Link href="/dashboard/seeker/settings" className="mt-6 w-full py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            Edit Profile
-          </Link>
         </div>
 
-        {/* Application Status Chart */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Application Pipeline</h2>
-          <div className="flex-grow w-full h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={applicationData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {applicationData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Legend verticalAlign="bottom" height={36} />
-              </PieChart>
-            </ResponsiveContainer>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Applications</h2>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {loading ? (
+              [1, 2, 3].map(i => (
+                <div key={i} className="p-6 flex items-center space-x-4 animate-pulse">
+                  <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                  </div>
+                </div>
+              ))
+            ) : applications.length === 0 ? (
+               <div className="p-12 text-center text-gray-500">
+                 You haven't applied to any jobs yet.
+               </div>
+            ) : (
+              applications.slice(0, 4).map((app) => (
+                <div key={app._id || app.id} className="p-6 hover:bg-gray-50 transition-colors flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100 overflow-hidden">
+                      {app.job?.companyLogo ? (
+                        <img src={app.job.companyLogo} alt={app.job.companyName} className="w-full h-full object-cover" />
+                      ) : (
+                        app.job?.companyName?.substring(0,2).toUpperCase() || <Briefcase className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{app.job?.title || 'Unknown Job'}</div>
+                      <div className="text-sm text-gray-500">{app.job?.companyName || 'Unknown Company'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      app.status === 'Offered' ? 'bg-emerald-100 text-emerald-800' :
+                      app.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                      app.status === 'Shortlisted' ? 'bg-purple-100 text-purple-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {app.status || 'Applied'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Recent Activity</h2>
-          <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700">View all</button>
-        </div>
-        <div className="space-y-6">
-          {recentActivity.map((activity, index) => (
-            <div key={activity.id} className={`flex gap-4 ${index !== recentActivity.length - 1 ? 'pb-6 border-b border-gray-100' : ''}`}>
-              <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Bell className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">{activity.text}</p>
-                <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+function StatCard({ icon, title, value }: { icon: React.ReactNode, title: string, value: string }) {
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+      <div className="p-3 bg-gray-50 rounded-xl">
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-500">{title}</p>
+        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
       </div>
     </div>
   );

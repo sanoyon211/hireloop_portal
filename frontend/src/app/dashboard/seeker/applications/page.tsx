@@ -1,73 +1,126 @@
 "use client";
 
-import { ExternalLink, CheckCircle, Clock, XCircle, FileText } from 'lucide-react';
-import Link from 'next/link';
+import React, { useState, useEffect } from "react";
+import { Building2, Search, Calendar, FileText } from "lucide-react";
+import Link from "next/link";
+import { applicationService } from "@/services/applicationService";
 
-export default function MyApplicationsPage() {
-  const applications = [
-    { id: '1', jobId: '101', title: 'Senior Software Engineer', company: 'Stripe', appliedAt: '2 days ago', status: 'Applied' },
-    { id: '2', jobId: '102', title: 'Frontend Developer', company: 'Vercel', appliedAt: '1 week ago', status: 'Under Review' },
-    { id: '3', jobId: '103', title: 'UX Designer', company: 'Airbnb', appliedAt: '2 weeks ago', status: 'Shortlisted' },
-    { id: '4', jobId: '104', title: 'Data Analyst', company: 'Notion', appliedAt: '3 weeks ago', status: 'Rejected' },
-    { id: '5', jobId: '105', title: 'Product Manager', company: 'Linear', appliedAt: '1 month ago', status: 'Offered' },
-  ];
+function getRelativeDate(dateString: string) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+  
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
+}
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Applied':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" /> Applied</span>;
-      case 'Under Review':
-      case 'Shortlisted':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800"><FileText className="w-3 h-3 mr-1" /> {status}</span>;
-      case 'Rejected':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" /> Rejected</span>;
-      case 'Offered':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Offered</span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">{status}</span>;
-    }
-  };
+export default function ApplicationsPage() {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        const response = await applicationService.getMyApplications();
+        const data = response.applications || response.data || response || [];
+        setApplications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching applications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApps();
+  }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">My Applications</h1>
-          <p className="text-sm text-gray-500 mt-1">Track the status of your job applications.</p>
-        </div>
+    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">My Applications</h1>
+        <p className="text-gray-500 mt-2">Track the status of all the jobs you have applied for.</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role & Company</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Applied</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+          <table className="w-full text-left min-w-[800px]">
+            <thead>
+              <tr className="bg-gray-50/50 border-b border-gray-100">
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Role / Company</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Date Applied</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Resume Used</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-right">Status</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {applications.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-5 whitespace-nowrap">
-                    <div className="font-bold text-gray-900">{app.title}</div>
-                    <div className="text-sm text-gray-500 mt-1">{app.company}</div>
-                  </td>
-                  <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-500">
-                    {app.appliedAt}
-                  </td>
-                  <td className="px-6 py-5 whitespace-nowrap">
-                    {getStatusBadge(app.status)}
-                  </td>
-                  <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
-                    <Link href={`/jobs/${app.jobId}`} className="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
-                      View Job <ExternalLink className="ml-1.5 w-4 h-4" />
-                    </Link>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                [1,2,3].map(i => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-6 bg-gray-200 rounded w-1/2"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4 flex justify-end"><div className="h-6 bg-gray-200 rounded-full w-20"></div></td>
+                  </tr>
+                ))
+              ) : applications.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-12 text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
+                      <FileText className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">No applications yet</h3>
+                    <p className="text-gray-500 mb-4">You haven't submitted any job applications.</p>
+                    <Link href="/jobs" className="text-indigo-600 font-medium hover:text-indigo-700">Browse Jobs</Link>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                applications.map((app) => (
+                  <tr key={app._id || app.id} className="hover:bg-indigo-50/30 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 text-gray-400 overflow-hidden">
+                          {app.job?.companyLogo ? (
+                            <img src={app.job.companyLogo} alt={app.job.companyName} className="w-full h-full object-cover" />
+                          ) : (
+                            app.job?.companyName?.substring(0, 2).toUpperCase() || <Building2 className="w-6 h-6" />
+                          )}
+                        </div>
+                        <div>
+                          <Link href={`/jobs/${app.job?._id || app.job?.id}`} className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+                            {app.job?.title || 'Unknown Job'}
+                          </Link>
+                          <div className="text-sm text-gray-500">{app.job?.companyName || 'Unknown Company'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                        {new Date(app.appliedAt || app.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 ml-6">{getRelativeDate(app.appliedAt || app.createdAt || Date.now().toString())}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-600 flex items-center">
+                        <FileText className="w-4 h-4 mr-1.5 text-gray-400" />
+                        {app.resumeName || 'Profile Resume'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        app.status === 'Offered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        app.status === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
+                        app.status === 'Shortlisted' || app.status === 'Interview Scheduled' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                        'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}>
+                        {app.status || 'Applied'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
