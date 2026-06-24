@@ -1,6 +1,6 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { Search, MapPin, Briefcase, Filter } from 'lucide-react';
+import { Search, MapPin, Briefcase, Filter, Heart } from 'lucide-react';
 import Link from 'next/link';
 
 const mockJobs = [
